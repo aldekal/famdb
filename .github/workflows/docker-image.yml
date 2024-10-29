@@ -20,4 +20,4 @@ jobs:
       run: docker build . --file Dockerfile --tag famdb:latest
 
     - name: Push the Docker image to Docker Hub
-      run: docker push famdb:latest
+      run: docker push aldekal/famdb:latest
