@@ -7,7 +7,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE users_hst (
-    hst_id SERIAL PRIMARY KEY,
+    hst_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     username VARCHAR(50) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
