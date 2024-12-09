@@ -1,9 +1,9 @@
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'viewer')) DEFAULT 'viewer',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(10) NOT NULL CHECK (role IN ('ROLE_ADMIN', 'ROLE_USER')) DEFAULT 'ROLE_USER',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE users_hst (
@@ -12,9 +12,30 @@ CREATE TABLE users_hst (
     username VARCHAR(50) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     change_type VARCHAR(10) NOT NULL CHECK (change_type IN ('INSERT', 'UPDATE', 'DELETE')),
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     changed_by UUID REFERENCES users(id)
 );
+
+CREATE OR REPLACE FUNCTION log_user_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO users_hst (user_id, username, password_hash, change_type, changed_at, changed_by)
+        VALUES (NEW.id, NEW.username, NEW.password_hash, 'INSERT', CURRENT_TIMESTAMP, NEW.id);
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO users_hst (user_id, username, password_hash, change_type, changed_at, changed_by)
+        VALUES (NEW.id, NEW.username, NEW.password_hash, 'UPDATE', CURRENT_TIMESTAMP, NEW.id);
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO users_hst (user_id, username, password_hash, change_type, changed_at, changed_by)
+        VALUES (OLD.id, OLD.username, OLD.password_hash, 'DELETE', CURRENT_TIMESTAMP, OLD.id);
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER user_changes_trigger
+AFTER INSERT OR UPDATE OR DELETE ON users
+FOR EACH ROW EXECUTE FUNCTION log_user_changes();
 
 -- Table for Persons
 -- Each person has a unique ID, first name, last name which are mandatory fields.
@@ -34,7 +55,8 @@ CREATE TABLE person (
     gender CHAR(1) CHECK (gender IN ('m', 'f', 'o')), -- m: male, f: female, o: other
     birth_place VARCHAR(100),
     profile_image VARCHAR(255),
-    last_checkout DATE NOT NULL DEFAULT CURRENT_DATE
+    last_checkout TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    changed_by UUID REFERENCES users(id)
 );
 
 CREATE TABLE person_hst (
