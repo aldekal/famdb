@@ -10,7 +10,7 @@ CREATE TABLE users_hst (
     hst_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     username VARCHAR(50) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     change_type VARCHAR(10) NOT NULL CHECK (change_type IN ('INSERT', 'UPDATE', 'DELETE')),
     changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     changed_by UUID REFERENCES users(id)
@@ -20,14 +20,14 @@ CREATE OR REPLACE FUNCTION log_user_changes()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO users_hst (user_id, username, password_hash, change_type, changed_at, changed_by)
-        VALUES (NEW.id, NEW.username, NEW.password_hash, 'INSERT', CURRENT_TIMESTAMP, NEW.id);
+        INSERT INTO users_hst (user_id, username, password, change_type, changed_at, changed_by)
+        VALUES (NEW.id, NEW.username, NEW.password, 'INSERT', CURRENT_TIMESTAMP, NEW.id);
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO users_hst (user_id, username, password_hash, change_type, changed_at, changed_by)
-        VALUES (NEW.id, NEW.username, NEW.password_hash, 'UPDATE', CURRENT_TIMESTAMP, NEW.id);
+        INSERT INTO users_hst (user_id, username, password, change_type, changed_at, changed_by)
+        VALUES (NEW.id, NEW.username, NEW.password, 'UPDATE', CURRENT_TIMESTAMP, NEW.id);
     ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO users_hst (user_id, username, password_hash, change_type, changed_at, changed_by)
-        VALUES (OLD.id, OLD.username, OLD.password_hash, 'DELETE', CURRENT_TIMESTAMP, OLD.id);
+        INSERT INTO users_hst (user_id, username, password, change_type, changed_at, changed_by)
+        VALUES (OLD.id, OLD.username, OLD.password, 'DELETE', CURRENT_TIMESTAMP, OLD.id);
     END IF;
     RETURN NULL;
 END;
@@ -55,8 +55,7 @@ CREATE TABLE person (
     gender CHAR(1) CHECK (gender IN ('m', 'f', 'o')), -- m: male, f: female, o: other
     birth_place VARCHAR(100),
     profile_image VARCHAR(255),
-    last_checkout TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    changed_by UUID REFERENCES users(id)
+    last_checkout TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE person_hst (
