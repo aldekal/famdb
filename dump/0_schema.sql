@@ -1,33 +1,41 @@
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(50) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(10) NOT NULL CHECK (role IN ('ROLE_ADMIN', 'ROLE_USER')) DEFAULT 'ROLE_USER',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    roles TEXT[] NOT NULL DEFAULT '{}'
 );
+
+INSERT INTO users (username, password, enabled, roles)
+VALUES (
+    'admin',
+    '$2a$10$eImGQbkNl6uWSz5zNP8VGuJ8OTVnZnHx9A.0Fb9bVEvVZP5dX9UK.', -- Verschlüsseltes Passwort für 'password'
+    TRUE,
+    ARRAY['ROLE_ADMIN']
+);
+
 
 CREATE TABLE users_hst (
     hst_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
-    username VARCHAR(50) NOT NULL,
+    username VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     change_type VARCHAR(10) NOT NULL CHECK (change_type IN ('INSERT', 'UPDATE', 'DELETE')),
-    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    changed_by UUID REFERENCES users(id)
+    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE OR REPLACE FUNCTION log_user_changes()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO users_hst (user_id, username, password, change_type, changed_at, changed_by)
-        VALUES (NEW.id, NEW.username, NEW.password, 'INSERT', CURRENT_TIMESTAMP, NEW.id);
+        INSERT INTO users_hst (user_id, username, password, change_type, changed_at)
+        VALUES (NEW.id, NEW.username, NEW.password, 'INSERT', CURRENT_TIMESTAMP);
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO users_hst (user_id, username, password, change_type, changed_at, changed_by)
-        VALUES (NEW.id, NEW.username, NEW.password, 'UPDATE', CURRENT_TIMESTAMP, NEW.id);
+        INSERT INTO users_hst (user_id, username, password, change_type, changed_at)
+        VALUES (NEW.id, NEW.username, NEW.password, 'UPDATE', CURRENT_TIMESTAMP);
     ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO users_hst (user_id, username, password, change_type, changed_at, changed_by)
-        VALUES (OLD.id, OLD.username, OLD.password, 'DELETE', CURRENT_TIMESTAMP, OLD.id);
+        INSERT INTO users_hst (user_id, username, password, change_type, changed_at)
+        VALUES (OLD.id, OLD.username, OLD.password, 'DELETE', CURRENT_TIMESTAMP);
     END IF;
     RETURN NULL;
 END;
