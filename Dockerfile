@@ -1,5 +1,5 @@
 # Use the official PostgreSQL image from the Docker Hub
-FROM postgres:latest
+FROM postgres:18.1-trixie
 
 # Set environment variables
 ENV POSTGRES_DB=famdb
